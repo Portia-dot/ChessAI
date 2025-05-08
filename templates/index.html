@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --timer-bg: #fff;
+            --timer-shadow: rgba(0,0,0,0.1);
+            --switch-bg: #ccc;
+            --switch-active: #2196F3;
+            --button-bg: #fff;
+            --button-hover: #f0f0f0;
+            --button-active: #e0e0e0;
+            --button-border: #ddd;
+            --difficulty-easy: #4CAF50;
+            --difficulty-medium: #FFC107;
+            --difficulty-hard: #F44336;
+            --highlight-color: rgba(0, 255, 0, 0.3);
+            --highlight-border: rgba(0, 255, 0, 0.5);
+            --selected-color: rgba(255, 255, 0, 0.3);
+            --selected-border: rgba(255, 255, 0, 0.5);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --timer-bg: #2d2d2d;
+            --timer-shadow: rgba(0,0,0,0.3);
+            --switch-bg: #666;
+            --switch-active: #64B5F6;
+            --button-bg: #2d2d2d;
+            --button-hover: #3d3d3d;
+            --button-active: #4d4d4d;
+            --button-border: #404040;
+            --highlight-color: rgba(0, 255, 0, 0.2);
+            --highlight-border: rgba(0, 255, 0, 0.4);
+            --selected-color: rgba(255, 255, 0, 0.2);
+            --selected-border: rgba(255, 255, 0, 0.4);
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--bg-color);
+            font-family: Arial, sans-serif;
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .controls-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 15px;
+            background-color: var(--timer-bg);
+            border-radius: 10px;
+            box-shadow: 0 2px 5px var(--timer-shadow);
+        }
+
+        .difficulty-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .difficulty-button {
+            padding: 8px 16px;
+            border: 2px solid var(--button-border);
+            border-radius: 20px;
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .difficulty-button:hover {
+            background-color: var(--button-hover);
+        }
+
+        .difficulty-button.active {
+            color: white;
+        }
+
+        .difficulty-button.easy.active {
+            background-color: var(--difficulty-easy);
+            border-color: var(--difficulty-easy);
+        }
+
+        .difficulty-button.medium.active {
+            background-color: var(--difficulty-medium);
+            border-color: var(--difficulty-medium);
+        }
+
+        .difficulty-button.hard.active {
+            background-color: var(--difficulty-hard);
+            border-color: var(--difficulty-hard);
+        }
+
+        #board {
+            width: 600px;
+            max-width: 90vw;
+            margin: 20px auto;
+            box-shadow: 0 4px 8px var(--timer-shadow);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .status {
+            margin: 20px 0;
+            font-size: 1.2em;
+            color: var(--text-color);
+            text-align: center;
+            padding: 10px 20px;
+            background-color: var(--timer-bg);
+            border-radius: 5px;
+            box-shadow: 0 2px 5px var(--timer-shadow);
+        }
+
+        .timer-container {
+            display: flex;
+            justify-content: space-between;
+            width: 600px;
+            max-width: 90vw;
+            margin: 10px auto;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .timer-container.active {
+            opacity: 1;
+        }
+
+        .timer {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--text-color);
+            padding: 10px 20px;
+            background-color: var(--timer-bg);
+            border-radius: 5px;
+            box-shadow: 0 2px 5px var(--timer-shadow);
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .timer.white {
+            color: var(--text-color);
+        }
+
+        .timer.black {
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--switch-bg);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--switch-active);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .switch-label {
+            font-size: 1.1em;
+            color: var(--text-color);
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--timer-shadow);
+        }
+
+        .theme-icon {
+            font-size: 1.2em;
+        }
+
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+
+        .loading-spinner.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--switch-bg);
+            border-top: 5px solid var(--switch-active);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .spinner-overlay.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .controls-container {
+                flex-direction: column;
+                padding: 10px;
+            }
+
+            .difficulty-container {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .difficulty-button {
+                font-size: 0.9em;
+                padding: 6px 12px;
+            }
+        }
+
+        /* Move highlighting styles */
+        .square-55d63 {
+            position: relative;
+        }
+
+        .square-55d63.highlight {
+            background-color: var(--highlight-color) !important;
+            box-shadow: inset 0 0 3px 3px var(--highlight-border);
+        }
+
+        .square-55d63.selected {
+            background-color: var(--selected-color) !important;
+            box-shadow: inset 0 0 3px 3px var(--selected-border);
+        }
+    </style>
+</head>
+<body>
+    <div class="spinner-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    <div class="game-container">
+        <div class="controls-container">
+            <div class="difficulty-container">
+                <button class="difficulty-button easy active" data-difficulty="easy">Easy</button>
+                <button class="difficulty-button medium" data-difficulty="medium">Medium</button>
+                <button class="difficulty-button hard" data-difficulty="hard">Hard</button>
+            </div>
+            <div class="switch-container">
+                <span class="switch-label">Timer</span>
+                <label class="switch">
+                    <input type="checkbox" id="timer-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="theme-toggle" id="theme-toggle">
+                <span class="theme-icon">🌙</span>
+                <span class="switch-label">Dark Mode</span>
+            </div>
+        </div>
+        <div class="timer-container" id="timer-container">
+            <div class="timer white" id="white-timer">10:00</div>
+            <div class="timer black" id="black-timer">10:00</div>
+        </div>
+        <div id="board"></div>
+        <div class="status" id="status">Your turn</div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chess.js') }}"></script>
+</body>
+</html>
